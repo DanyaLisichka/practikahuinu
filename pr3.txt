@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker WebApp</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main>
+        <h1>Моё первое Docker-приложение</h1>
+        <p>Главная страница сайта.</p>
+        <a href="about.html">О проекте</a>
+        <button id="hello">Нажми меня</button>
+        <p id="message"></p>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>О проекте</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main>
+        <h1>О проекте</h1>
+        <p>Это тестовое приложение для практической работы по Docker.</p>
+        <a href="index.html">На главную</a>
+    </main>
+</body>
+</html>
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f4f8;
+    color: #222;
+    padding: 40px;
+}
+
+main {
+    max-width: 600px;
+    margin: auto;
+    padding: 30px;
+    background: white;
+    border-radius: 12px;
+}
+
+a {
+    color: #2563eb;
+}
+
+document.getElementById('hello').addEventListener('click', () => {
+    document.getElementById('message').textContent = 'Docker работает!';
+});
+
+
+
+
+
+
+FROM nginx:alpine
+
+LABEL maintainer="student@example.com"
+
+COPY ./site /usr/share/nginx/html
+
+EXPOSE 80
+
+HEALTHCHECK CMD wget -qO- http://localhost/ || exit 1
+
+{
+  "name": "nodeapp",
+  "version": "1.0.0",
+  "private": true
+}
+
+const http = require('http');
+
+const server = http.createServer((req, res) => {
+    res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8'
+    });
+
+    res.end('Node.js приложение работает!');
+});
+
+server.listen(3000, '0.0.0.0', () => {
+    console.log('Server started on port 3000');
+});
+
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install --production
+
+COPY . .
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY --from=builder /app /app
+
+CMD ["node", "server.js"]
