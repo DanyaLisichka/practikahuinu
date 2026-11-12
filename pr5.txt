@@ -1,0 +1,168 @@
+docker run -d \
+  --name b1 \
+  -p 8080:80 \
+  -v /opt/site:/usr/share/nginx/html:ro \
+  nginx:alpine
+
+
+
+echo "<h1>Файл изменён!</h1>" > /opt/site/index.html
+
+
+server {
+    listen 80;
+
+    location / {
+        return 200 "Custom nginx config works!\n";
+    }
+}
+
+
+docker run -d \
+  --name b2 \
+  -p 8081:80 \
+  -v /opt/nginx.conf:/etc/nginx/conf.d/default.conf:ro \
+  nginx:alpine
+
+
+docker run -d \
+  --name b3 \
+  -p 8083:80 \
+  -v /opt/logs:/var/log/nginx \
+  nginx:alpine
+
+
+docker run -d \
+  --name v1 \
+  -v appdata:/data \
+  alpine sh -c "sleep 3600"
+
+docker run --rm \
+  -v appdata:/data \
+  alpine cat /data/f
+
+
+
+mkdir -p /opt/protected
+
+echo "Secret data" > /opt/protected/index.html
+
+
+docker run -d \
+  --name permtest \
+  -p 8084:80 \
+  -v /opt/protected:/usr/share/nginx/html:ro \
+  nginx:alpine
+
+
+docker run -d \
+  --name t \
+  --tmpfs /tmp:rw,size=64m \
+  nginx:alpine
+
+
+services:
+  web:
+    image: nginx:alpine
+    volumes:
+      - "./site:/usr/share/nginx/html:ro"
+    tmpfs:
+      - "/tmp:size=64m"
+
+
+
+echo "<h1>HTTPS работает!</h1>" > /opt/practice5/site/index.html
+
+
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /opt/practice5/key.pem \
+  -out /opt/practice5/cert.pem \
+  -subj "/CN=localhost"
+
+
+
+server {
+    listen 443 ssl;
+    server_name localhost;
+
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location /uploads/ {
+        alias /var/www/uploads/;
+    }
+}
+
+
+
+
+services:
+  web:
+    image: nginx:alpine
+
+    ports:
+      - "8443:443"
+
+    volumes:
+      - "./site:/usr/share/nginx/html:ro"
+      - "uploads:/var/www/uploads"
+      - "./logs:/var/log/nginx"
+      - "./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro"
+      - "./cert.pem:/etc/nginx/ssl/cert.pem:ro"
+      - "./key.pem:/etc/nginx/ssl/key.pem:ro"
+
+    tmpfs:
+      - "/tmp:size=64m"
+
+volumes:
+  uploads:
+
+
+docker run --rm \
+  -v /tmp/docker-v-source:/data \
+  alpine ls -la /data
+
+
+docker run --rm \
+  --mount type=bind,src=/tmp/docker-mount-source,dst=/data \
+  alpine ls /data
+
+
+docker run -d \
+  --name logtest \
+  -p 8085:80 \
+  -v /opt/logs:/var/log/nginx \
+  nginx:alpine
+
+
+docker run -d \
+  --name src \
+  -v appdata:/data \
+  alpine sh -c "echo shared > /data/s && sleep 3600"
+
+
+docker run --rm \
+  --volumes-from src \
+  alpine cat /data/s
+
+
+docker run -d \
+  --name ro \
+  --read-only \
+  --tmpfs /var/cache/nginx \
+  --tmpfs /var/run \
+  -p 8086:80 \
+  nginx:alpine
+
+
+docker rm -f p1 p3 p4 p5 b1 b2 b3 permtest logtest src ro
+
+
