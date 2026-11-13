@@ -1,0 +1,127 @@
+server {
+    listen 80;
+
+    location / {
+        return 200 "ConfigMap works!\n";
+    }
+}
+
+
+
+
+
+kubectl create configmap nginx-conf \
+  --from-file=nginx.conf
+
+
+
+kubectl create secret generic db-pass \
+  --from-literal=password='s3cr3t'
+
+
+
+spec:
+  containers:
+    - name: nginx
+      image: nginx:alpine
+
+      volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+
+      env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-pass
+              key: password
+
+  volumes:
+    - name: nginx-config
+      configMap:
+        name: nginx-conf
+
+
+
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: data
+
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  resources:
+    requests:
+      storage: 1Gi
+
+
+
+kubectl run storage-test \
+  --image=alpine \
+  --restart=Never \
+  --command -- sh -c "echo 'Persistent data!' > /data/test.txt && sleep 3600" \
+  --overrides='{"spec":{"containers":[{"name":"storage-test","image":"alpine","command":["sh","-c","echo '\"'\"'Persistent data!'\"'\"' > /data/test.txt && sleep 3600"],"volumeMounts":[{"name":"storage","mountPath":"/data"}]}],"volumes":[{"name":"storage","persistentVolumeClaim":{"claimName":"data"}}]}}'
+
+
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: storage-test
+
+spec:
+  containers:
+    - name: storage-test
+      image: alpine
+      command:
+        - sh
+        - -c
+        - "echo 'Persistent data!' > /data/test.txt && sleep 3600"
+
+      volumeMounts:
+        - name: storage
+          mountPath: /data
+
+  volumes:
+    - name: storage
+      persistentVolumeClaim:
+        claimName: data
+
+
+
+kubectl set resources deployment web \
+  --limits=cpu=200m,memory=128Mi
+
+
+kubectl run nginx2 \
+  --image=nginx:alpine \
+  -n test
+
+
+apiVersion: v1
+kind: ResourceQuota
+
+metadata:
+  name: pod-quota
+  namespace: test
+
+spec:
+  hard:
+    pods: "2"
+
+
+kubectl run nginx3 \
+  --image=nginx:alpine \
+  -n test
+
+
+kubectl run nginx4 \
+  --image=nginx:alpine \
+  -n test
+
+
